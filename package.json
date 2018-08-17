@@ -4,7 +4,8 @@
   "description": "Dashboard/watcher for pull requests on Github",
   "main": "index.js",
   "dependencies": {
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "github-oauth": "^0.2.2"
   },
   "devDependencies": {},
   "scripts": {
