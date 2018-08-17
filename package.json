@@ -1,0 +1,21 @@
+{
+  "name": "pr-watcher",
+  "version": "1.0.0",
+  "description": "Dashboard/watcher for pull requests on Github",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.16.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "pr",
+    "github",
+    "pull",
+    "request"
+  ],
+  "author": "Dan Rabinowitz",
+  "license": "ISC"
+}
