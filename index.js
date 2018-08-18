@@ -1,16 +1,38 @@
 const express = require('express'),
-    config = require('./config'),
-    githubAuth = require('github-oauth');
+    path = require('path'),
+    config = require('./config');
 
+const githubAuth = require('github-oauth')({
+    githubClient: config.github.client,
+    githubSecret: config.github.secret,
+    baseURL: config.baseUrl,
+    loginURI: '/login',
+    callbackURI: '/callback',
+    scope: 'user'
+});
 
 const app = express();
 
-const port = process.env.PORT || 8080;
-
-
-app.get('/', (req, res) => {
-    return res.send(process.env.CLIENT_ID);
+app.all('/login', (req, res) => {
+    return githubOAuth.login(req, res);
 });
+
+app.all('/callback', (req, res) => {
+    return githubOAuth.callback(req, res);
+});
+
+githubOAuth.on('error', function (err) {
+    console.error('Github login error', err);
+});
+
+githubOAuth.on('token', function (token, resp) {
+    console.log('Github oauth token', token);
+    return resp.end(JSON.stringify(token));
+});
+
+app.use('/', express.static(path.join(__dirname, '/public')));
+
+const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
     console.log("App started on port " + port);
