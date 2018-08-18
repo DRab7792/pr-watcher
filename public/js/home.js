@@ -19,9 +19,21 @@ $(document).ready(function() {
         });
     }
 
+    function formRepoUrl(repo) {
+        var url = repo.url;
+        var regex = /repos\/([^\/]*)\/([^\/]*)/gi;
+        var match = regex.exec(url);
+        if (match.length != 3) {
+            console.log("Error forming detail URL", match);
+            return '/';
+        }
+        return '/repo/' + match[1] + '/' + match[2];
+    }
+
     function formRepoItem(repo) {
         var html = '';
-        html += '<a class="list-group-item list-group-item-dark list-group-item-action flex-column align-items-start" href="/repo/' + repo.id + '">';
+        var detailUrl = formRepoUrl(repo);
+        html += '<a class="list-group-item  list-group-item-action flex-column align-items-start" href="' + detailUrl + '">';
         html += '<div class="d-flex w-100 justify-content-between">';
         html += '<h5 class="mb-1">' + repo.name + '</h5>';
         var updated = moment(repo.updated_at);

@@ -1,6 +1,9 @@
 body {
-    background-color: #aaa;
     padding-top: 72px;
+}
+
+a:hover {
+    text-decoration: none !important;
 }
 
 nav .action {

@@ -36,7 +36,6 @@ $(document).ready(function() {
                 $('.loggedIn').show();
             });
         }else{
-            console.log("User is not logged in", $('.loggedOut'));
             $('.loggedOut').css('display', 'block');
             $('.loggedIn').hide();
         }

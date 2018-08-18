@@ -1,6 +1,7 @@
 const express = require('express'),
     path = require('path'),
     request = require('request'),
+    queryString = require('query-string'),
     cookieParser = require('cookie-parser'),
     config = require('./config');
 
@@ -58,6 +59,7 @@ function checkToken(req, res) {
 function callGithubApi(req, res, route, params, resolver) {
     // Make request
     var url = "https://api.github.com/" + route;
+    if (params) url += "?" + queryString.stringify(params);
     request(url, {
         method: 'GET',
         json: true,
@@ -81,14 +83,7 @@ app.get('/api/me', (req, res) => {
 app.get('/api/repos', (req, res) => {
     checkToken(req, res);
 
-    callGithubApi(req, res, "user/repos", [], function(repos) {
-        repos.sort(function (a, b) {
-            // Turn your strings into dates, and then subtract them
-            // to get a value that is either negative, positive, or zero.
-            return new Date(b.updated_at) - new Date(a.updated_at);
-        });
-        return repos;
-    });
+    callGithubApi(req, res, "user/repos", {"sort": "updated"});
 });
 
 // Home
@@ -96,6 +91,19 @@ app.get('/', (req, res) => {
     res.render('pages/home', {
         apiUrl: config.baseUrl + '/api/',
         page: 'home'
+    });
+});
+
+// Repo page
+app.get('/repo/:owner/:repo', (req, res) => {
+    if (!req.cookies.token){
+        return res.redirect('/');
+    }
+
+    res.render('pages/repo', {
+        apiUrl: config.baseUrl + '/api/',
+        page: 'repo',
+        params: req.params
     });
 });
 
