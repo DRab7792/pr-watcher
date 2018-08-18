@@ -13,11 +13,11 @@ const githubAuth = require('github-oauth')({
 
 const app = express();
 
-app.all('/api/login', (req, res) => {
+app.all('/login', (req, res) => {
     return githubAuth.login(req, res);
 });
 
-app.all('/api/callback', (req, res) => {
+app.all('/callback', (req, res) => {
     return githubAuth.callback(req, res);
 });
 
