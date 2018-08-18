@@ -25,9 +25,10 @@ githubAuth.on('error', function (err) {
     console.error('Github login error', err);
 });
 
-githubAuth.on('token', function (token, resp) {
+githubAuth.on('token', function (token, res) {
     console.log('Github oauth token', token);
-    return resp.end(JSON.stringify(token));
+    res.cookie('token', token);
+    res.sendFile(path.join(__dirname, '/public/callback.html'));
 });
 
 app.use('/', express.static(path.join(__dirname, '/public')));
