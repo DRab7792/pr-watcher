@@ -13,19 +13,19 @@ const githubAuth = require('github-oauth')({
 
 const app = express();
 
-app.all('/login', (req, res) => {
-    return githubOAuth.login(req, res);
+app.all('/api/login', (req, res) => {
+    return githubAuth.login(req, res);
 });
 
-app.all('/callback', (req, res) => {
-    return githubOAuth.callback(req, res);
+app.all('/api/callback', (req, res) => {
+    return githubAuth.callback(req, res);
 });
 
-githubOAuth.on('error', function (err) {
+githubAuth.on('error', function (err) {
     console.error('Github login error', err);
 });
 
-githubOAuth.on('token', function (token, resp) {
+githubAuth.on('token', function (token, resp) {
     console.log('Github oauth token', token);
     return resp.end(JSON.stringify(token));
 });
