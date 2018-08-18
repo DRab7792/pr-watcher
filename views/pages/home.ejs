@@ -1,0 +1,13 @@
+<% include ../partials/header %>
+<div class="container">
+    <div class="loggedOut">
+        <h3 class="display-4">Introduction</h3>
+        <p>This tool is meant to watch open pull requests in Github repositories. The requests will be split into your own PRs and other users' PRs. If someone else's pull request needs reviewing, it will be marked accordingly. After the user makes the appropriate changes to their pull request, it will also be marked so you can then approve their changes and they can merge their PR. If your pull request has changes requested on it, it will be marked in a different list.</p>
+    </div>
+    <div class="loggedIn">
+        <h3 class="display-4">Github Repositories</h3>
+        <div class="list-group repos">
+        </div>
+    </div>
+</div>
+<% include ../partials/footer %>

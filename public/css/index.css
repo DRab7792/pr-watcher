@@ -1,0 +1,33 @@
+body {
+    background-color: #aaa;
+    padding-top: 72px;
+}
+
+nav .action {
+    cursor: pointer;
+}
+
+nav .action:hover {
+    opacity: 0.6;
+}
+
+nav .username {
+    display: none;
+    border-right: 1px solid #fff;
+    padding-right: 10px;
+    margin-right: 5px;
+}
+
+.logout {
+    display: none;
+}
+
+.container {
+    padding-top: 30px;
+    padding-bottom: 30px;
+}
+
+footer {
+    margin-top: 50px;
+    text-align: center;
+}

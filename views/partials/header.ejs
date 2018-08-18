@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Home | PR Watcher</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+            crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
+        <script src="/static/js/index.js"></script>
+        <script src="/static/js/<%= page %>.js"></script>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+        <link rel="stylesheet" type="text/css" media="screen" href="/static/css/index.css" />
+        <link rel="stylesheet" type="text/css" media="screen" href="/static/css/<%= page %>.css" />
+    </head>
+
+    <body>
+        <input type="hidden" value="<%= apiUrl %>" id="apiUrl">
+        <nav class="navbar fixed-top navbar-dark bg-dark">
+            <h1 class="text-light">PR Watcher</h1>
+            <div class="text-light">
+                <span class="username"></span>
+                <span class="action login">Login</span>
+                <span class="action logout">Logout</span>
+            </div>
+        </nav>
+        <div class="container">
