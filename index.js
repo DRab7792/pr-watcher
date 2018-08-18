@@ -27,11 +27,11 @@ githubAuth.on('error', function (err) {
 
 githubAuth.on('token', function (token, res) {
     console.log('Github oauth token', token);
-    res.cookie('token', token);
+    res.cookie('token', token['access_token']);
     res.sendFile(path.join(__dirname, '/public/callback.html'));
 });
 
-app.use('/', express.static(path.join(__dirname, '/public')));
+app.use('/static', express.static(path.join(__dirname, '/public')));
 
 const port = process.env.PORT || 8080;
 
