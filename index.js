@@ -21,14 +21,18 @@ app.all('/callback', (req, res) => {
     return githubAuth.callback(req, res);
 });
 
-githubAuth.on('error', function (err) {
+githubAuth.on('error', (err) => {
     console.error('Github login error', err);
 });
 
-githubAuth.on('token', function (token, res) {
+githubAuth.on('token', (token, res) => {
     console.log('Github oauth token', token);
     res.cookie('token', token['access_token']);
     res.sendFile(path.join(__dirname, '/public/callback.html'));
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '/public/index.html'));
 });
 
 app.use('/static', express.static(path.join(__dirname, '/public')));
