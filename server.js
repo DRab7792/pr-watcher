@@ -1,5 +1,6 @@
 const express = require('express'),
     path = require('path'),
+    fs = require('fs'),
     request = require('request'),
     queryString = require('query-string'),
     cookieParser = require('cookie-parser'),
@@ -119,8 +120,23 @@ const getCommentsFromPRs = (req, res, prs) => {
 };
 
 const resolvePr = pr => {
-    return pr;
+    const adjPr = {};
+    adjPr.title = pr.title;
+    adjPr.url = pr.html_url;
+    adjPr.created = pr.created_at;
+    adjPr.updated = pr.updated_at;
+
+    return adjPr;
 };
+
+const classifyMineInReview = (adjPr, data) => {
+    return adjPr;
+};
+
+const classifyMineNeedsReview = (adjPr, data) => {
+    return adjPr;
+};
+
 
 app.get('/api/prs', (req, res) => {
     checkToken(req, res);
@@ -133,6 +149,8 @@ app.get('/api/prs', (req, res) => {
     ) {
         return res.send(formResponse(true, [], "Missing parameters."));
     }
+
+    const userId = req.query.user_id;
 
     // Setup arrays
     const finalData = {
@@ -159,22 +177,93 @@ app.get('/api/prs', (req, res) => {
             return getCommentsFromPRs(req, res, prs);
         })
         .then(prs => {
+            const now = new Date();
+            fs.writeFileSync('data/' + req.query.repo + '-' + now.getTime() + '.json', JSON.stringify(prs));
+
             // Categorize PRs
             prs.forEach(cur => {
-                const adjPr = resolvePr(cur);
+                let adjPr = resolvePr(cur);
+                
                 if (cur.user.id == req.query.user_id) {
-                    if (cur.comments.length) {
+                    if (cur.review_comments.length) {
+                        adjPr = classifyMineInReview(adjPr, cur);
                         finalData.mine['in-review'].push(adjPr);
                     } else {
+                        adjPr = classifyMineNeedsReview(adjPr, cur);
                         finalData.mine['needs-review'].push(adjPr);
                     }
                 } else {
-                    if (cur.comments.length) {
-                        finalData.others['in-review'].push(adjPr);
-                    } else {
-                        finalData.others['needs-review'].push(adjPr);
+                    // Start with the needs review PRs
+
+                    // The current user is being requested to review this PR but no review comments have been made
+                    if (cur.requested_reviewers.length && !cur.review_comments.length) {
+                        let classified = false;
+                        cur.requested_reviewers.forEach(reviewer => {
+                            if (reviewer.id == userId) {
+                                adjPr.state = 'requested';
+                                adjPr.class = 'danger';
+                                adjPr.priority = 3;
+                                classified = true;
+                                finalData.others['needs-review'].push(adjPr);
+                            }
+                        });
+                        if (classified) return classified;
                     }
+
+                    // Are there no review requests and no review comments?
+                    if (!cur.review_comments.length && !cur.requested_reviewers.length) {
+                        adjPr.state = 'unreviewed';
+                        adjPr.class = 'warning';
+                        adjPr.priority = 2;
+                        finalData.others['needs-review'].push(adjPr);
+                        return true;
+                    }
+
+                    // Are there review comments from other users already for this PR but none for the current user?
+                    if (cur.review_comments.length) {
+                        let currentUserCommented = false;
+                        let reviewers = [];
+                        cur.review_comments.forEach(comment => {
+                            if (comment.user.id == userId) {
+                                currentUserCommented = true;
+                                return;
+                            } else if (comment.user.id != cur.user.id) {
+                                reviewers.push(comment.user.login);
+                            }
+                        });
+                        if (!currentUserCommented) {
+                            adjPr.state = 'other-reviewer';
+                            adjPr.class = 'success';
+                            if (reviewers.length) adjPr.details = 'Reviewed by ' + reviewers.join(', ');
+                            adjPr.priority = 1;
+                            finalData.others['needs-review'].push(adjPr);
+                            return true;
+                        }
+                    }
+
+                    // Onto the in review PRs
+                    
+                    // Count the review comments and replies
                 }
+            });
+
+            // Sort all arrays by importance
+            const cmp = (a, b) => {
+                if (a.priority < b.priority) {
+                    return 1;
+                } else if (a.priority > b.priority) {
+                    return -1;
+                } else {
+                    return new Date(a.created) > new Date(b.created) ? 1 : -1;
+                }
+            };
+
+            const owners = ['others', 'mine'];
+            const lists = ['needs-review', 'in-review'];
+            owners.forEach(owner => {
+                lists.forEach(list => {
+                    finalData[owner][list].sort(cmp);
+                });
             });
 
             return res.send(formResponse(true, finalData));

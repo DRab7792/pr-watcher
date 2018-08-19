@@ -1,3 +1,23 @@
 .nav-link {
     outline: none !important;
 }
+
+.label {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    margin-top: 30px;
+}
+
+.color {
+    display: inline-block;
+    float: left;
+    padding: 0 !important;
+    width: 25px;
+    height: 25px;
+    margin: 0 10px 0 0;
+}
+
+.legend {
+    margin-bottom: 20px;
+}

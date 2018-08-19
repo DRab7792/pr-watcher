@@ -10,4 +10,76 @@
         <a class="nav-link" id="mine" href="#mine">My PRs</a>
     </li>
 </ul>
+<div class="prs" id="others">
+    <h3 class="label">In Review By You</h3>
+    <div class="legend row">
+        <div class="key col-lg-4" id="fixed">
+            <div class="color alert alert-danger"></div>
+            <span>Changes Applied, Review Again</span>
+        </div>
+        <div class="key col-lg-4" id="fixing">
+            <div class="color alert alert-warning"></div>
+            <span>Changes Being Applied</span>
+        </div>
+        <div class="key col-lg-4" id="unfixed">
+            <div class="color alert alert-success"></div>
+            <span>Waiting For Changes</span>
+        </div>
+    </div>
+    <div class="list-group pr-list" id="in-review">
+
+    </div>
+    <h3 class="label">Needs Review</h3>
+    <div class="legend row">
+        <div class="key col-lg-4" id="requested">
+            <div class="color alert alert-danger"></div>
+            <span>Requested Review</span>
+        </div>
+        <div class="key col-lg-4" id="unreviewed">
+            <div class="color alert alert-warning"></div>
+            <span>Needs Review</span>
+        </div>
+        <div class="key col-lg-4" id="other-reviewer">
+            <div class="color alert alert-success"></div>
+            <span>Being Reviewed By Someone Else</span>
+        </div>
+    </div>
+    <div class="list-group pr-list" id="needs-review">
+
+    </div>
+</div>
+<div class="prs" id="mine">
+    <h3 class="label">In Review</h3>
+    <div class="legend row">
+        <div class="key col-lg-4" id="unfixed">
+            <div class="color alert alert-danger"></div>
+            <span>Changes Requested</span>
+        </div>
+        <div class="key col-lg-4" id="fixing">
+            <div class="color alert alert-warning"></div>
+            <span>Changes Being Applied</span>
+        </div>
+        <div class="key col-lg-4" id="fixed">
+            <div class="color alert alert-success"></div>
+            <span>Waiting For Response</span>
+        </div>
+    </div>
+    <div class="list-group prs" id="in-review">
+
+    </div>
+    <h3 class="label">Needs Review</h3>
+    <div class="legend row">
+        <div class="key col-lg-4" id="requested">
+            <div class="color alert alert-danger"></div>
+            <span>Requested Review</span>
+        </div>
+        <div class="key col-lg-4" id="waiting">
+            <div class="color alert alert-success"></div>
+            <span>Waiting for Review</span>
+        </div>
+    </div>
+    <div class="list-group prs" id="needs-review">
+
+    </div>
+</div>
 <% include ../partials/footer %>
