@@ -241,9 +241,65 @@ app.get('/api/prs', (req, res) => {
                         }
                     }
 
-                    // Onto the in review PRs
+                    // On to the in-review PRs
                     
                     // Count the review comments and replies
+                    if (cur.review_comments.length) {
+
+                        // Mark all comments from the current user
+                        const reviewComments = {};
+                        let numReviews = 0, numResponses = 0;
+                        cur.review_comments.forEach(comment => {
+                            if (comment.user.id == userId && !comment.in_reply_to_id) {
+                                reviewComments[comment.id] = 0;
+                                numReviews++;
+                            }
+                        });
+
+                        // Mark all comments from the owner of the PR
+                        const ownerId = cur.user.id;
+                        cur.review_comments.forEach(comment => {
+                            if (comment.user.id == ownerId && comment.in_reply_to_id) {
+                                reviewComments[comment.in_reply_to_id.toString()]++;
+                                numResponses++;
+                            }
+                        });
+
+                        // TODO: Account for code changes on the comment line
+
+                        // Form detail line
+                        let detail = numReviews > 1 ? `${numReviews} changes requested.` : `${numReviews} change requested.`;
+                        detail += numResponses > 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+                        adjPr.details = detail;
+
+                        // Count the number of 0s
+                        let numZeros = 0;
+                        Object.keys(reviewComments).forEach(key => {
+                            if (reviewComments[key] == 0) numZeros++;
+                        });
+                        console.log(adjPr.title);
+                        console.log(reviewComments);
+
+                        // Waiting for changes
+                        if (numZeros == Object.keys(reviewComments).length) {
+                            adjPr.state = 'unfixed';
+                            adjPr.class = 'success';
+                            adjPr.priority = 1;
+                            finalData.others['in-review'].push(adjPr);
+                        // Changes in process
+                        } else if (numZeros > 0 && numZeros < Object.keys(reviewComments).length) {
+                            adjPr.state = 'fixing';
+                            adjPr.class = 'warning';
+                            adjPr.priority = 2;
+                            finalData.others['in-review'].push(adjPr);
+                        // All comments have been addressed
+                        } else if (numZeros == 0) {
+                            adjPr.state = 'fixed';
+                            adjPr.class = 'danger';
+                            adjPr.priority = 3;
+                            finalData.others['in-review'].push(adjPr);
+                        }
+                    }
                 }
             });
 
