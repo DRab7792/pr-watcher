@@ -56,7 +56,7 @@ function checkToken(req, res) {
     }
 }
 
-function callGithubApi(req, res, route, params, promise) {
+function callGithubApi(req, res, route, params, callback) {
     // Make request
     var url = "https://api.github.com/" + route;
     if (params) url += "?" + queryString.stringify(params);
@@ -69,9 +69,9 @@ function callGithubApi(req, res, route, params, promise) {
         }
     }, (err, resp, body) => {
         if (err){
-            return promise ? Promise.reject(err) : res.send(formResponse(false, [], err));
+            return res.send(formResponse(false, [], err));
         }
-        if (promise) return Promise.resolve(body);
+        if (callback) return callback(body);
         return res.send(formResponse(true, body));
     });
 }
@@ -101,7 +101,7 @@ app.get('/api/prs', (req, res) => {
     }
 
     // Setup arrays
-    const res = {
+    const finalData = {
         'mine': {
             'need-review': [],
             'in-review':[]
@@ -120,8 +120,7 @@ app.get('/api/prs', (req, res) => {
         "sort": "created",
         "direction": "asc",
         "per_page": 100
-    }, true)
-    .then(prs => {
+    }, prs => {
         prs.forEach(cur => {
             if (cur.user.id == req.query.user_id) {
                 mine.push(cur);
@@ -129,9 +128,11 @@ app.get('/api/prs', (req, res) => {
                 others.push(cur);
             }
         });
-    })
-    .catch(err => {
-        return res.send(formResponse(true, [], "Error calling Github."));
+
+        return res.send(formResponse(true, {
+            'mine': mine,
+            'others': others
+        }));
     });
 });
 

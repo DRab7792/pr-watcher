@@ -14,7 +14,8 @@ function detectHash(){
 }
 
 function getPrs(callback) {
-    window.apiCall("prs?owner=" + window.repoInfo.owner + "&repo=" + window.repoInfo.repo + "&user_id=" + window.userId, callback);
+    var userId = Cookies.get("userId");
+    window.apiCall("prs?owner=" + window.repoInfo.owner + "&repo=" + window.repoInfo.repo + "&user_id=" + userId, callback);
 }
 
 function formLists() {

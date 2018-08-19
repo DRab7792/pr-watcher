@@ -1,4 +1,5 @@
 window.apiCall = function(route, callback){
+    var apiUrl = $("#apiUrl").val();
     $.ajax({
         url: apiUrl + route,
         dataType: 'json',
@@ -17,8 +18,6 @@ window.apiCall = function(route, callback){
 }
 
 $(document).ready(function() {
-    var apiUrl = $("#apiUrl").val();
-
     function getMe(callback) {
         window.apiCall("me", callback);
     }
@@ -29,7 +28,7 @@ $(document).ready(function() {
         if (token) {
             getMe(function(data) {
                 if (!data) return;
-                window.userId = data.id;
+                Cookies.set("userId", data.id);
                 $('.username').show();
                 $('.username').html(data.login);
                 $('.login').hide();
