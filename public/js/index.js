@@ -1,22 +1,26 @@
+window.apiCall = function(route, callback){
+    $.ajax({
+        url: apiUrl + route,
+        dataType: 'json',
+        success: function (resp) {
+            if (!resp.success || !resp.data) {
+                console.log("Error calling API" + resp.error);
+                return callback();
+            }
+            return callback(resp.data);
+        },
+        error: function () {
+            console.log("Error calling API");
+            return callback();
+        }
+    });
+}
+
 $(document).ready(function() {
     var apiUrl = $("#apiUrl").val();
 
     function getMe(callback) {
-        $.ajax({
-            url: apiUrl + "me",
-            dataType: 'json',
-            success: function (resp) {
-                if (!resp.success || !resp.data) {
-                    console.log("Error getting Github user" + resp.error);
-                    return callback();
-                }
-                return callback(resp.data);
-            },
-            error: function () {
-                console.log("Error getting Github user");
-                return callback();
-            }
-        });
+        window.apiCall("me", callback);
     }
 
     function updateHeader() {
@@ -25,6 +29,7 @@ $(document).ready(function() {
         if (token) {
             getMe(function(data) {
                 if (!data) return;
+                window.userId = data.id;
                 $('.username').show();
                 $('.username').html(data.login);
                 $('.login').hide();

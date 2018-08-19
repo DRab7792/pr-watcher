@@ -2,21 +2,7 @@ $(document).ready(function() {
     var apiUrl = $("#apiUrl").val();
 
     function getRepos(callback) {
-        $.ajax({
-            url: apiUrl + "repos",
-            dataType: 'json',
-            success: function (resp) {
-                if (!resp.success || !resp.data) {
-                    console.log("Error getting Github repos" + resp.error);
-                    return callback();
-                }
-                return callback(resp.data);
-            },
-            error: function () {
-                console.log("Error getting Github repos");
-                return callback();
-            }
-        });
+        window.apiCall("repos", callback);
     }
 
     function formRepoUrl(repo) {

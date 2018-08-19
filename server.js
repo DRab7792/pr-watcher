@@ -56,7 +56,7 @@ function checkToken(req, res) {
     }
 }
 
-function callGithubApi(req, res, route, params, resolver) {
+function callGithubApi(req, res, route, params, promise) {
     // Make request
     var url = "https://api.github.com/" + route;
     if (params) url += "?" + queryString.stringify(params);
@@ -68,8 +68,10 @@ function callGithubApi(req, res, route, params, resolver) {
             'Authorization': 'token ' + req.cookies.token
         }
     }, (err, resp, body) => {
-        if (err) return res.send(formResponse(false, [], err));
-        if (resolver) body = resolver(body);
+        if (err){
+            return promise ? Promise.reject(err) : res.send(formResponse(false, [], err));
+        }
+        if (promise) return Promise.resolve(body);
         return res.send(formResponse(true, body));
     });
 }
@@ -83,14 +85,62 @@ app.get('/api/me', (req, res) => {
 app.get('/api/repos', (req, res) => {
     checkToken(req, res);
 
-    callGithubApi(req, res, "user/repos", {"sort": "updated"});
+    callGithubApi(req, res, "user/repos", {"sort": "updated", "per_page": 100});
+});
+
+app.get('/api/prs', (req, res) => {
+    checkToken(req, res);
+
+    // Check parameters
+    if (
+        !req.query.owner || 
+        !req.query.repo ||
+        !req.query.user_id
+    ) {
+        return res.send(formResponse(true, [], "Missing parameters."));
+    }
+
+    // Setup arrays
+    const res = {
+        'mine': {
+            'need-review': [],
+            'in-review':[]
+        },
+        'others': {
+            'need-review': [],
+            'in-review': []
+        }
+    };
+
+    const mine = [], others = [];
+
+    // Get the prs
+    callGithubApi(req, res, "repos/" + req.query.owner + "/" + req.query.repo + "/pulls", {
+        "state": "open",
+        "sort": "created",
+        "direction": "asc",
+        "per_page": 100
+    }, true)
+    .then(prs => {
+        prs.forEach(cur => {
+            if (cur.user.id == req.query.user_id) {
+                mine.push(cur);
+            } else {
+                others.push(cur);
+            }
+        });
+    })
+    .catch(err => {
+        return res.send(formResponse(true, [], "Error calling Github."));
+    });
 });
 
 // Home
 app.get('/', (req, res) => {
     res.render('pages/home', {
         apiUrl: config.baseUrl + '/api/',
-        page: 'home'
+        page: 'home',
+        title: 'Home'
     });
 });
 
@@ -103,7 +153,8 @@ app.get('/repo/:owner/:repo', (req, res) => {
     res.render('pages/repo', {
         apiUrl: config.baseUrl + '/api/',
         page: 'repo',
-        params: req.params
+        repoInfo: JSON.stringify(req.params),
+        title: req.params.repo
     });
 });
 
