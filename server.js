@@ -499,7 +499,7 @@ app.get('/repo/:owner/:repo', (req, res) => {
 
 app.use('/static', express.static(path.join(__dirname, '/public')));
 
-const port = process.env.PORT || 8080;
+const port = config.port;
 
 app.listen(port, () => {
     // Create data directory if it doesn't exist
