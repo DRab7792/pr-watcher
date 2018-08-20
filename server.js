@@ -62,6 +62,7 @@ function callGithubApi(req, res, route, params, callback) {
     // Make request
     var url = "https://api.github.com/" + route;
     if (params) url += "?" + queryString.stringify(params);
+    console.log(url);
     request(url, {
         method: 'GET',
         json: true,
@@ -318,6 +319,75 @@ const classifyOtherPR = (cur, adjPr, userId, finalData) => {
     return finalData;
 };
 
+const callGithubForPRInfo = (req, res) => {
+    return new Promise((resolve, reject) => {
+        callGithubApi(req, res, "repos/" + req.query.owner + "/" + req.query.repo + "/pulls", {
+            "state": "open",
+            "sort": "created",
+            "direction": "asc",
+            "per_page": 100
+        }, prs => {
+            // Get comments for all PRs
+            getReviewCommentsFromPRs(req, res, prs)
+            .then(prs => {
+                return getCommentsFromPRs(req, res, prs);
+            })
+            .then(prs => {
+                const now = new Date();
+                const filename = req.query.owner + "__" + req.query.repo + "__" + now.getTime();
+
+                // Write the data to the data directory
+                fs.writeFileSync('./data/' + filename + '.json', JSON.stringify(prs));
+
+                return resolve(prs);
+            });
+        });
+    });
+};
+
+const getPRData = (req, res) => {
+    const prDataFiles = fs.readdirSync('./data');
+    const filePrefix = req.query.owner + "__" + req.query.repo + "__";
+
+    let cacheFile = false;
+    prDataFiles.forEach(curFile => {
+        // Wrong repo
+        if (curFile.indexOf(filePrefix) == -1) return;
+
+        // Parse the filename
+        const regex = /([0-9]*)\.json/gi;
+        const match = regex.exec(curFile);
+        console.log(match.length);
+        if (match.length != 2) return;
+
+        // Get the time
+        const fileTime = new Date();
+        fileTime.setTime(parseInt(match[1], 10));
+
+        // Should the file be deleted?
+        const now = new Date();
+        const threshold = now.getTime() - (1000 * 60 * 5); // 5 minutes in ms 
+
+        console.log(threshold + ", " + fileTime.getTime());
+        // Delete the file
+        if (threshold > fileTime.getTime()) {
+            fs.unlinkSync('./data/' + curFile);
+        // Use the file
+        } else {
+            cacheFile = curFile;
+        }
+    });
+
+    // Get the data from the cache file and return it to be used
+    if (cacheFile) {
+        const json = fs.readFileSync('./data/' + cacheFile);
+        const data = JSON.parse(json);
+        return Promise.resolve(data);
+    }
+
+    return callGithubForPRInfo(req, res);
+};
+
 
 app.get('/api/prs', (req, res) => {
     checkToken(req, res);
@@ -346,53 +416,41 @@ app.get('/api/prs', (req, res) => {
     };
 
     // Get the prs
-    callGithubApi(req, res, "repos/" + req.query.owner + "/" + req.query.repo + "/pulls", {
-        "state": "open",
-        "sort": "created",
-        "direction": "asc",
-        "per_page": 100
-    }, prs => {
-        // Get comments for all PRs
-        getReviewCommentsFromPRs(req, res, prs)
-        .then(prs => {
-            return getCommentsFromPRs(req, res, prs);
-        })
-        .then(prs => {
-
-            // Categorize PRs
-            prs.forEach(cur => {
-                let adjPr = resolvePr(cur);
-                
-                // Now start classifying, begin with "Mine"
-                if (cur.user.id == req.query.user_id) {
-                    finalData = classifyMyPR(cur, adjPr, userId, finalData);
-                // Now work on the "Others"
-                } else {
-                    finalData = classifyOtherPR(cur, adjPr, userId, finalData);
-                }
-            });
-
-            // Sort all arrays by importance
-            const cmp = (a, b) => {
-                if (a.priority < b.priority) {
-                    return 1;
-                } else if (a.priority > b.priority) {
-                    return -1;
-                } else {
-                    return new Date(a.created) > new Date(b.created) ? 1 : -1;
-                }
-            };
-
-            const owners = ['others', 'mine'];
-            const lists = ['needs-review', 'in-review'];
-            owners.forEach(owner => {
-                lists.forEach(list => {
-                    finalData[owner][list].sort(cmp);
-                });
-            });
-
-            return res.send(formResponse(true, finalData));
+    getPRData(req, res)
+    .then(prs => {
+        // Categorize PRs
+        prs.forEach(cur => {
+            let adjPr = resolvePr(cur);
+            
+            // Now start classifying, begin with "Mine"
+            if (cur.user.id == req.query.user_id) {
+                finalData = classifyMyPR(cur, adjPr, userId, finalData);
+            // Now work on the "Others"
+            } else {
+                finalData = classifyOtherPR(cur, adjPr, userId, finalData);
+            }
         });
+
+        // Sort all arrays by importance
+        const cmp = (a, b) => {
+            if (a.priority < b.priority) {
+                return 1;
+            } else if (a.priority > b.priority) {
+                return -1;
+            } else {
+                return new Date(a.created) > new Date(b.created) ? 1 : -1;
+            }
+        };
+
+        const owners = ['others', 'mine'];
+        const lists = ['needs-review', 'in-review'];
+        owners.forEach(owner => {
+            lists.forEach(list => {
+                finalData[owner][list].sort(cmp);
+            });
+        });
+
+        return res.send(formResponse(true, finalData));
     });
 });
 
@@ -424,5 +482,11 @@ app.use('/static', express.static(path.join(__dirname, '/public')));
 const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
+    // Create data directory if it doesn't exist
+    const dir = './data';
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+
     console.log("App started on port " + port);
 });
