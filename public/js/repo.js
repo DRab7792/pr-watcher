@@ -38,15 +38,36 @@ function formLists() {
         if (!data) return;
         var owners = ['others', 'mine'];
         var lists = ['needs-review', 'in-review'];
+        var faviconPriority = false;
+
         owners.forEach(function(owner) {
+            var highPriority = 0;
             lists.forEach(function(list) {
                 var html = '';
                 data[owner][list].forEach(function(curPr) {
+                    if (curPr.priority == 3){
+                        highPriority++;
+                        faviconPriority = true;
+                    }
                     html += formPr(curPr);
                 });
                 $('.prs#' + owner + ' .pr-list#' + list).html(html);
             });
+
+            // Show the number of high priority items
+            if (highPriority) {
+                $('.nav-link#' + owner + ' .priority').html("(" + highPriority + ")");
+            } else {
+                $('.nav-link#' + owner + ' .priority').html("");
+            }
         });
+
+        // Correct the favicon accordingly
+        if (faviconPriority) {
+            $("#favicon").attr("href", "/static/img/favicon-eyes.png");
+        } else {
+            $("#favicon").attr("href", "/static/img/favicon-poop.png");
+        }
     });
 }
 

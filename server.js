@@ -177,23 +177,91 @@ app.get('/api/prs', (req, res) => {
             return getCommentsFromPRs(req, res, prs);
         })
         .then(prs => {
-            const now = new Date();
-            fs.writeFileSync('data/' + req.query.repo + '-' + now.getTime() + '.json', JSON.stringify(prs));
 
             // Categorize PRs
             prs.forEach(cur => {
                 let adjPr = resolvePr(cur);
                 
+                // Now start classifying, begin with "Mine"
                 if (cur.user.id == req.query.user_id) {
-                    if (cur.review_comments.length) {
-                        adjPr = classifyMineInReview(adjPr, cur);
-                        finalData.mine['in-review'].push(adjPr);
-                    } else {
-                        adjPr = classifyMineNeedsReview(adjPr, cur);
+
+                    // Start with the "needs review" PRs
+                    if (!cur.review_comments.length) {
+                        // No reviews requested
+                        if (!cur.requested_reviewers.length) {
+                            adjPr.state = 'requested';
+                            adjPr.class = 'warning';
+                            adjPr.priority = 2;
+                        // Reviews have been requested
+                        } else {
+                            adjPr.state = 'waiting';
+                            adjPr.class = 'success';
+                            adjPr.priority = 1;
+                        }
                         finalData.mine['needs-review'].push(adjPr);
+                        return true;
                     }
+
+                    // Count the number of review comments and responses if applicable
+                    const reviewComments = {};
+                    let numUnresponded = 0,
+                        numReviews = 0,
+                        numResponses = 0;
+
+                    // Mark all comments from other users not in reply of something
+                    cur.review_comments.forEach(comment => {
+                        if (comment.user.id != userId && !comment.in_reply_to_id) {
+                            reviewComments[comment.id] = 0;
+                            numReviews++;
+                        }
+                    });
+
+                    // Mark all replies from the current user
+                    const ownerId = cur.user.id;
+                    cur.review_comments.forEach(comment => {
+                        if (comment.user.id == userId && comment.in_reply_to_id) {
+                            reviewComments[comment.in_reply_to_id.toString()]++;
+                            numResponses++;
+                        }
+                    });
+
+                    console.log(reviewComments);
+
+                    // Count the number of 0s
+                    Object.keys(reviewComments).forEach(key => {
+                        if (reviewComments[key] == 0) numUnresponded++;
+                    });
+
+                    // Form detail line
+                    let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
+                    detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+                    adjPr.details = detail;
+
+                    // On to the "in review" PRS
+                    // Waiting for changes
+                    if (numUnresponded == Object.keys(reviewComments).length) {
+                        adjPr.state = 'unfixed';
+                        adjPr.class = 'danger';
+                        adjPr.priority = 3;
+                        finalData.mine['in-review'].push(adjPr);
+                        // Changes in process
+                    } else if (numUnresponded > 0 && numUnresponded < Object.keys(reviewComments).length) {
+                        adjPr.state = 'fixing';
+                        adjPr.class = 'warning';
+                        adjPr.priority = 2;
+                        finalData.mine['in-review'].push(adjPr);
+                        // All comments have been addressed
+                    } else if (numUnresponded == 0) {
+                        adjPr.state = 'fixed';
+                        adjPr.class = 'success';
+                        adjPr.priority = 1;
+                        finalData.mine['in-review'].push(adjPr);
+                    }
+
+
+                // Now work on the "Others"
                 } else {
-                    // Start with the needs review PRs
+                    // Start with the "needs review" PRs
 
                     // The current user is being requested to review this PR but no review comments have been made
                     if (cur.requested_reviewers.length && !cur.review_comments.length) {
@@ -246,9 +314,13 @@ app.get('/api/prs', (req, res) => {
                     // Count the review comments and replies
                     if (cur.review_comments.length) {
 
-                        // Mark all comments from the current user
+                        // Count the number of review comments and responses if applicable
                         const reviewComments = {};
-                        let numReviews = 0, numResponses = 0;
+                        let numUnresponded = 0,
+                            numReviews = 0,
+                            numResponses = 0;
+
+                        // Mark all comments from the current user
                         cur.review_comments.forEach(comment => {
                             if (comment.user.id == userId && !comment.in_reply_to_id) {
                                 reviewComments[comment.id] = 0;
@@ -265,35 +337,32 @@ app.get('/api/prs', (req, res) => {
                             }
                         });
 
+                        // Count the number of 0s
+                        Object.keys(reviewComments).forEach(key => {
+                            if (reviewComments[key] == 0) numUnresponded++;
+                        });
+
                         // TODO: Account for code changes on the comment line
 
                         // Form detail line
-                        let detail = numReviews > 1 ? `${numReviews} changes requested.` : `${numReviews} change requested.`;
-                        detail += numResponses > 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+                        let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
+                        detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
                         adjPr.details = detail;
 
-                        // Count the number of 0s
-                        let numZeros = 0;
-                        Object.keys(reviewComments).forEach(key => {
-                            if (reviewComments[key] == 0) numZeros++;
-                        });
-                        console.log(adjPr.title);
-                        console.log(reviewComments);
-
                         // Waiting for changes
-                        if (numZeros == Object.keys(reviewComments).length) {
+                        if (numUnresponded == Object.keys(reviewComments).length) {
                             adjPr.state = 'unfixed';
                             adjPr.class = 'success';
                             adjPr.priority = 1;
                             finalData.others['in-review'].push(adjPr);
                         // Changes in process
-                        } else if (numZeros > 0 && numZeros < Object.keys(reviewComments).length) {
+                        } else if (numUnresponded > 0 && numUnresponded < Object.keys(reviewComments).length) {
                             adjPr.state = 'fixing';
                             adjPr.class = 'warning';
                             adjPr.priority = 2;
                             finalData.others['in-review'].push(adjPr);
                         // All comments have been addressed
-                        } else if (numZeros == 0) {
+                        } else if (numUnresponded == 0) {
                             adjPr.state = 'fixed';
                             adjPr.class = 'danger';
                             adjPr.priority = 3;
