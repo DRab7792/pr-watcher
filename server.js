@@ -129,12 +129,193 @@ const resolvePr = pr => {
     return adjPr;
 };
 
-const classifyMineInReview = (adjPr, data) => {
-    return adjPr;
+const classifyMyPR = (cur, adjPr, userId, finalData) => {
+
+    // Start with the "needs review" PRs
+    if (!cur.review_comments.length) {
+        // No reviews requested
+        if (!cur.requested_reviewers.length) {
+            adjPr.state = 'requested';
+            adjPr.class = 'warning';
+            adjPr.priority = 2;
+            // Reviews have been requested
+        } else {
+            adjPr.state = 'waiting';
+            adjPr.class = 'success';
+            adjPr.priority = 1;
+        }
+        finalData.mine['needs-review'].push(adjPr);
+        return finalData;
+    }
+
+    // Count the number of review comments and responses if applicable
+    const reviewComments = {};
+    let numUnresponded = 0,
+        numReviews = 0,
+        numResponses = 0;
+
+    // Mark all comments from other users not in reply of something
+    cur.review_comments.forEach(comment => {
+        if (comment.user.id != userId && !comment.in_reply_to_id) {
+            reviewComments[comment.id] = 0;
+            numReviews++;
+        }
+    });
+
+    // Mark all replies from the current user
+    const ownerId = cur.user.id;
+    cur.review_comments.forEach(comment => {
+        if (comment.user.id == userId && comment.in_reply_to_id) {
+            reviewComments[comment.in_reply_to_id.toString()]++;
+            numResponses++;
+        }
+    });
+
+    // Count the number of 0s
+    Object.keys(reviewComments).forEach(key => {
+        if (reviewComments[key] == 0) numUnresponded++;
+    });
+
+    // Form detail line
+    let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
+    detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+    adjPr.details = detail;
+
+    // On to the "in review" PRS
+    // Waiting for changes
+    if (numUnresponded == Object.keys(reviewComments).length) {
+        adjPr.state = 'unfixed';
+        adjPr.class = 'danger';
+        adjPr.priority = 3;
+        finalData.mine['in-review'].push(adjPr);
+        // Changes in process
+    } else if (numUnresponded > 0 && numUnresponded < Object.keys(reviewComments).length) {
+        adjPr.state = 'fixing';
+        adjPr.class = 'warning';
+        adjPr.priority = 2;
+        finalData.mine['in-review'].push(adjPr);
+        // All comments have been addressed
+    } else if (numUnresponded == 0) {
+        adjPr.state = 'fixed';
+        adjPr.class = 'success';
+        adjPr.priority = 1;
+        finalData.mine['in-review'].push(adjPr);
+    }
+
+    return finalData;
 };
 
-const classifyMineNeedsReview = (adjPr, data) => {
-    return adjPr;
+const classifyOtherPR = (cur, adjPr, userId, finalData) => {
+    // Start with the "needs review" PRs
+
+    // The current user is being requested to review this PR but no review comments have been made
+    if (cur.requested_reviewers.length && !cur.review_comments.length) {
+        let classified = false;
+        cur.requested_reviewers.forEach(reviewer => {
+            if (reviewer.id == userId) {
+                adjPr.state = 'requested';
+                adjPr.class = 'danger';
+                adjPr.priority = 3;
+                classified = true;
+                finalData.others['needs-review'].push(adjPr);
+            }
+        });
+        if (classified) return finalData;
+    }
+
+    // Are there no review requests and no review comments?
+    if (!cur.review_comments.length && !cur.requested_reviewers.length) {
+        adjPr.state = 'unreviewed';
+        adjPr.class = 'warning';
+        adjPr.priority = 2;
+        finalData.others['needs-review'].push(adjPr);
+        return finalData;
+    }
+
+    // Are there review comments from other users already for this PR but none for the current user?
+    if (cur.review_comments.length) {
+        let currentUserCommented = false;
+        let reviewers = [];
+        cur.review_comments.forEach(comment => {
+            if (comment.user.id == userId) {
+                currentUserCommented = true;
+                return;
+            } else if (comment.user.id != cur.user.id) {
+                reviewers.push(comment.user.login);
+            }
+        });
+        if (!currentUserCommented) {
+            adjPr.state = 'other-reviewer';
+            adjPr.class = 'success';
+            if (reviewers.length) adjPr.details = 'Reviewed by ' + reviewers.join(', ');
+            adjPr.priority = 1;
+            finalData.others['needs-review'].push(adjPr);
+            return finalData;
+        }
+    }
+
+    // On to the in-review PRs
+
+    // Count the review comments and replies
+    if (cur.review_comments.length) {
+
+        // Count the number of review comments and responses if applicable
+        const reviewComments = {};
+        let numUnresponded = 0,
+            numReviews = 0,
+            numResponses = 0;
+
+        // Mark all comments from the current user
+        cur.review_comments.forEach(comment => {
+            if (comment.user.id == userId && !comment.in_reply_to_id) {
+                reviewComments[comment.id] = 0;
+                numReviews++;
+            }
+        });
+
+        // Mark all comments from the owner of the PR
+        const ownerId = cur.user.id;
+        cur.review_comments.forEach(comment => {
+            if (comment.user.id == ownerId && comment.in_reply_to_id) {
+                reviewComments[comment.in_reply_to_id.toString()]++;
+                numResponses++;
+            }
+        });
+
+        // Count the number of 0s
+        Object.keys(reviewComments).forEach(key => {
+            if (reviewComments[key] == 0) numUnresponded++;
+        });
+
+        // TODO: Account for code changes on the comment line
+
+        // Form detail line
+        let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
+        detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+        adjPr.details = detail;
+
+        // Waiting for changes
+        if (numUnresponded == Object.keys(reviewComments).length) {
+            adjPr.state = 'unfixed';
+            adjPr.class = 'success';
+            adjPr.priority = 1;
+            finalData.others['in-review'].push(adjPr);
+            // Changes in process
+        } else if (numUnresponded > 0 && numUnresponded < Object.keys(reviewComments).length) {
+            adjPr.state = 'fixing';
+            adjPr.class = 'warning';
+            adjPr.priority = 2;
+            finalData.others['in-review'].push(adjPr);
+            // All comments have been addressed
+        } else if (numUnresponded == 0) {
+            adjPr.state = 'fixed';
+            adjPr.class = 'danger';
+            adjPr.priority = 3;
+            finalData.others['in-review'].push(adjPr);
+        }
+    }
+
+    return finalData;
 };
 
 
@@ -153,7 +334,7 @@ app.get('/api/prs', (req, res) => {
     const userId = req.query.user_id;
 
     // Setup arrays
-    const finalData = {
+    let finalData = {
         'mine': {
             'needs-review': [],
             'in-review':[]
@@ -184,191 +365,10 @@ app.get('/api/prs', (req, res) => {
                 
                 // Now start classifying, begin with "Mine"
                 if (cur.user.id == req.query.user_id) {
-
-                    // Start with the "needs review" PRs
-                    if (!cur.review_comments.length) {
-                        // No reviews requested
-                        if (!cur.requested_reviewers.length) {
-                            adjPr.state = 'requested';
-                            adjPr.class = 'warning';
-                            adjPr.priority = 2;
-                        // Reviews have been requested
-                        } else {
-                            adjPr.state = 'waiting';
-                            adjPr.class = 'success';
-                            adjPr.priority = 1;
-                        }
-                        finalData.mine['needs-review'].push(adjPr);
-                        return true;
-                    }
-
-                    // Count the number of review comments and responses if applicable
-                    const reviewComments = {};
-                    let numUnresponded = 0,
-                        numReviews = 0,
-                        numResponses = 0;
-
-                    // Mark all comments from other users not in reply of something
-                    cur.review_comments.forEach(comment => {
-                        if (comment.user.id != userId && !comment.in_reply_to_id) {
-                            reviewComments[comment.id] = 0;
-                            numReviews++;
-                        }
-                    });
-
-                    // Mark all replies from the current user
-                    const ownerId = cur.user.id;
-                    cur.review_comments.forEach(comment => {
-                        if (comment.user.id == userId && comment.in_reply_to_id) {
-                            reviewComments[comment.in_reply_to_id.toString()]++;
-                            numResponses++;
-                        }
-                    });
-
-                    console.log(reviewComments);
-
-                    // Count the number of 0s
-                    Object.keys(reviewComments).forEach(key => {
-                        if (reviewComments[key] == 0) numUnresponded++;
-                    });
-
-                    // Form detail line
-                    let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
-                    detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
-                    adjPr.details = detail;
-
-                    // On to the "in review" PRS
-                    // Waiting for changes
-                    if (numUnresponded == Object.keys(reviewComments).length) {
-                        adjPr.state = 'unfixed';
-                        adjPr.class = 'danger';
-                        adjPr.priority = 3;
-                        finalData.mine['in-review'].push(adjPr);
-                        // Changes in process
-                    } else if (numUnresponded > 0 && numUnresponded < Object.keys(reviewComments).length) {
-                        adjPr.state = 'fixing';
-                        adjPr.class = 'warning';
-                        adjPr.priority = 2;
-                        finalData.mine['in-review'].push(adjPr);
-                        // All comments have been addressed
-                    } else if (numUnresponded == 0) {
-                        adjPr.state = 'fixed';
-                        adjPr.class = 'success';
-                        adjPr.priority = 1;
-                        finalData.mine['in-review'].push(adjPr);
-                    }
-
-
+                    finalData = classifyMyPR(cur, adjPr, userId, finalData);
                 // Now work on the "Others"
                 } else {
-                    // Start with the "needs review" PRs
-
-                    // The current user is being requested to review this PR but no review comments have been made
-                    if (cur.requested_reviewers.length && !cur.review_comments.length) {
-                        let classified = false;
-                        cur.requested_reviewers.forEach(reviewer => {
-                            if (reviewer.id == userId) {
-                                adjPr.state = 'requested';
-                                adjPr.class = 'danger';
-                                adjPr.priority = 3;
-                                classified = true;
-                                finalData.others['needs-review'].push(adjPr);
-                            }
-                        });
-                        if (classified) return classified;
-                    }
-
-                    // Are there no review requests and no review comments?
-                    if (!cur.review_comments.length && !cur.requested_reviewers.length) {
-                        adjPr.state = 'unreviewed';
-                        adjPr.class = 'warning';
-                        adjPr.priority = 2;
-                        finalData.others['needs-review'].push(adjPr);
-                        return true;
-                    }
-
-                    // Are there review comments from other users already for this PR but none for the current user?
-                    if (cur.review_comments.length) {
-                        let currentUserCommented = false;
-                        let reviewers = [];
-                        cur.review_comments.forEach(comment => {
-                            if (comment.user.id == userId) {
-                                currentUserCommented = true;
-                                return;
-                            } else if (comment.user.id != cur.user.id) {
-                                reviewers.push(comment.user.login);
-                            }
-                        });
-                        if (!currentUserCommented) {
-                            adjPr.state = 'other-reviewer';
-                            adjPr.class = 'success';
-                            if (reviewers.length) adjPr.details = 'Reviewed by ' + reviewers.join(', ');
-                            adjPr.priority = 1;
-                            finalData.others['needs-review'].push(adjPr);
-                            return true;
-                        }
-                    }
-
-                    // On to the in-review PRs
-                    
-                    // Count the review comments and replies
-                    if (cur.review_comments.length) {
-
-                        // Count the number of review comments and responses if applicable
-                        const reviewComments = {};
-                        let numUnresponded = 0,
-                            numReviews = 0,
-                            numResponses = 0;
-
-                        // Mark all comments from the current user
-                        cur.review_comments.forEach(comment => {
-                            if (comment.user.id == userId && !comment.in_reply_to_id) {
-                                reviewComments[comment.id] = 0;
-                                numReviews++;
-                            }
-                        });
-
-                        // Mark all comments from the owner of the PR
-                        const ownerId = cur.user.id;
-                        cur.review_comments.forEach(comment => {
-                            if (comment.user.id == ownerId && comment.in_reply_to_id) {
-                                reviewComments[comment.in_reply_to_id.toString()]++;
-                                numResponses++;
-                            }
-                        });
-
-                        // Count the number of 0s
-                        Object.keys(reviewComments).forEach(key => {
-                            if (reviewComments[key] == 0) numUnresponded++;
-                        });
-
-                        // TODO: Account for code changes on the comment line
-
-                        // Form detail line
-                        let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
-                        detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
-                        adjPr.details = detail;
-
-                        // Waiting for changes
-                        if (numUnresponded == Object.keys(reviewComments).length) {
-                            adjPr.state = 'unfixed';
-                            adjPr.class = 'success';
-                            adjPr.priority = 1;
-                            finalData.others['in-review'].push(adjPr);
-                        // Changes in process
-                        } else if (numUnresponded > 0 && numUnresponded < Object.keys(reviewComments).length) {
-                            adjPr.state = 'fixing';
-                            adjPr.class = 'warning';
-                            adjPr.priority = 2;
-                            finalData.others['in-review'].push(adjPr);
-                        // All comments have been addressed
-                        } else if (numUnresponded == 0) {
-                            adjPr.state = 'fixed';
-                            adjPr.class = 'danger';
-                            adjPr.priority = 3;
-                            finalData.others['in-review'].push(adjPr);
-                        }
-                    }
+                    finalData = classifyOtherPR(cur, adjPr, userId, finalData);
                 }
             });
 
