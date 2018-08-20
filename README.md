@@ -10,3 +10,10 @@ If you want to install this on a server you need to first create a Github OAuth 
 - **CLIENT_SECRET** (required) - Get this from your OAuth application setup in Github.
 - **BASE_URL** (required) - This is the URL of where the app will live without a trailing slash.
 - **PORT** (optional) - If you want to specify a different port, you can. Otherwise this will default to port 8080.
+
+# Screenshots
+
+![image](https://user-images.githubusercontent.com/3160859/44317040-11790f80-a3fd-11e8-99d3-c3acb253cde4.png)
+
+![image](https://user-images.githubusercontent.com/3160859/44317059-2d7cb100-a3fd-11e8-883c-3aea91993db1.png)
+
