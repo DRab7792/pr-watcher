@@ -150,14 +150,17 @@ const classifyMyPR = (cur, adjPr, userId, finalData) => {
 
     // Count the number of review comments and responses if applicable
     const reviewComments = {};
+    let reviewers = [];
     let numUnresponded = 0,
         numReviews = 0,
+        numChanges = 0,
         numResponses = 0;
 
-    // Mark all comments from other users not in reply of something
+    // Mark all review comments from other users not in reply of something
     cur.review_comments.forEach(comment => {
         if (comment.user.id != userId && !comment.in_reply_to_id) {
             reviewComments[comment.id] = 0;
+            reviewers.push(comment.user.login);
             numReviews++;
         }
     });
@@ -171,6 +174,14 @@ const classifyMyPR = (cur, adjPr, userId, finalData) => {
         }
     });
 
+    // Mark all code changes on main review comments from the other user
+    cur.review_comments.forEach(comment => {
+        if (!comment.in_reply_to_id && comment.position != comment.original_position && comment.commit_id != comment.original_commit_id) {
+            reviewComments[comment.id]++;
+            numChanges++;
+        }
+    });
+
     // Count the number of 0s
     Object.keys(reviewComments).forEach(key => {
         if (reviewComments[key] == 0) numUnresponded++;
@@ -178,8 +189,12 @@ const classifyMyPR = (cur, adjPr, userId, finalData) => {
 
     // Form detail line
     let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
-    detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+    detail += numResponses != 1 ? `${numResponses} replies. ` : `${numResponses} reply. `;
+    detail += numChanges != 1 ? `${numChanges} code changes.` : `${numChanges} code change.`;
     adjPr.details = detail;
+
+    // Who has reviewed this PR
+    adjPr.reviewers = [...new Set(reviewers)];
 
     // On to the "in review" PRS
     // Waiting for changes
@@ -263,6 +278,7 @@ const classifyOtherPR = (cur, adjPr, userId, finalData) => {
         const reviewComments = {};
         let numUnresponded = 0,
             numReviews = 0,
+            numChanges = 0,
             numResponses = 0;
 
         // Mark all comments from the current user
@@ -273,7 +289,7 @@ const classifyOtherPR = (cur, adjPr, userId, finalData) => {
             }
         });
 
-        // Mark all comments from the owner of the PR
+        // Mark all comments/code changes from the owner of the PR
         const ownerId = cur.user.id;
         cur.review_comments.forEach(comment => {
             if (comment.user.id == ownerId && comment.in_reply_to_id) {
@@ -282,16 +298,23 @@ const classifyOtherPR = (cur, adjPr, userId, finalData) => {
             }
         });
 
+        // Mark all code changes on comments from the current user
+        cur.review_comments.forEach(comment => {
+            if (comment.user.id == userId && !comment.in_reply_to_id && comment.position != comment.original_position && comment.commit_id != comment.original_commit_id) {
+                reviewComments[comment.id]++;
+                numChanges++;
+            }
+        });
+
         // Count the number of 0s
         Object.keys(reviewComments).forEach(key => {
             if (reviewComments[key] == 0) numUnresponded++;
         });
 
-        // TODO: Account for code changes on the comment line
-
         // Form detail line
         let detail = numReviews != 1 ? `${numReviews} changes requested. ` : `${numReviews} change requested. `;
-        detail += numResponses != 1 ? `${numResponses} replies.` : `${numResponses} reply.`;
+        detail += numResponses != 1 ? `${numResponses} replies. ` : `${numResponses} reply. `;
+        detail += numChanges != 1 ? `${numChanges} code changes.` : `${numChanges} code change.`;
         adjPr.details = detail;
 
         // Waiting for changes

@@ -29,6 +29,7 @@ function formPr(pr) {
     html += '<small> Last Updated: ' + updated.fromNow() + '</small>';
     html += '</div>';
     if (pr.details) html += '<p class="mb-1">' + pr.details + '</p>';
+    if (pr.reviewers) html += '<small class="text-muted">Reviewed by: ' + pr.reviewers.join(', ') + '</small>';
     html += '</a>';
     return html;
 }
