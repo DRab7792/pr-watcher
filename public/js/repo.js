@@ -76,4 +76,5 @@ $(window).on('hashchange', detectHash);
 $(document).ready(function(){
     detectHash();
     formLists();
+    setInterval(formLists, 1000 * 60 * 1);
 });

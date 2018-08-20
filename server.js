@@ -62,7 +62,6 @@ function callGithubApi(req, res, route, params, callback) {
     // Make request
     var url = "https://api.github.com/" + route;
     if (params) url += "?" + queryString.stringify(params);
-    console.log(url);
     request(url, {
         method: 'GET',
         json: true,
@@ -357,7 +356,6 @@ const getPRData = (req, res) => {
         // Parse the filename
         const regex = /([0-9]*)\.json/gi;
         const match = regex.exec(curFile);
-        console.log(match.length);
         if (match.length != 2) return;
 
         // Get the time
@@ -368,7 +366,6 @@ const getPRData = (req, res) => {
         const now = new Date();
         const threshold = now.getTime() - (1000 * 60 * 5); // 5 minutes in ms 
 
-        console.log(threshold + ", " + fileTime.getTime());
         // Delete the file
         if (threshold > fileTime.getTime()) {
             fs.unlinkSync('./data/' + curFile);
