@@ -13,7 +13,11 @@ If you want to install this on a server you need to first create a Github OAuth 
 
 # Screenshots
 
+The following image shows the status of other users' pull requests in a particular repository and categorizes them by priority and whether or not you are reviewing that pull request.
+
 ![image](https://user-images.githubusercontent.com/3160859/44317040-11790f80-a3fd-11e8-99d3-c3acb253cde4.png)
+
+This image shows the status of your own pull requests in a particular repository and categorizes them by priority and whether or not the pull request is in review.
 
 ![image](https://user-images.githubusercontent.com/3160859/44317059-2d7cb100-a3fd-11e8-883c-3aea91993db1.png)
 
