@@ -11,6 +11,8 @@ If you want to install this on a server you need to first create a Github OAuth 
 - **BASE_URL** (required) - This is the URL of where the app will live without a trailing slash.
 - **PORT** (optional) - If you want to specify a different port, you can. Otherwise this will default to port 8080.
 
+If you are installing on Heroku, be sure to use the `heroku/nodejs` buildpack.
+
 # Screenshots
 
 The following image shows the status of other users' pull requests in a particular repository and categorizes them by priority and whether or not you are reviewing that pull request.
