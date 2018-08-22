@@ -1,6 +1,6 @@
 # Introduction
 
-This tool is meant to watch open pull requests in Github repositories. The requests will be split into your own PRs and other users' PRs. If someone else's pull request needs reviewing, it will be marked accordingly. After the user makes the appropriate changes to their pull request, it will also be marked so you can then approve their changes and they can merge their PR. If your pull request has changes requested on it, it will be marked in a different list. The page will also automatically refresh every minute, while the backend will pull the latest repository data every five minutes. Note that only the top 100 repos and 100 pull requests will be displayed.
+This tool is meant to watch open pull requests in Github repositories. The requests will be split into your own PRs and other users' PRs. If someone else's pull request needs reviewing, it will be marked accordingly. After the user makes the appropriate changes to their pull request, it will also be marked so you can then approve their changes and they can merge their PR. If your pull request has changes requested on it, it will be marked in a different list. The page will also automatically refresh every minute, while the backend will pull the latest repository data every five minutes. High priority pull requests will be shown in red and cause the favicon to change, alerting you that a pull request needs your attention. Note that only the top 100 repos and 100 pull requests will be displayed.
 
 # Installation
 
