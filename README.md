@@ -31,4 +31,6 @@ This image shows the status of your own pull requests in a particular repository
 
 - Add more information about each Pull Request to the lists
 
-- Add a third tab for statistics about how long each Pull Request is open
+- Add a tab for stale branches with no Pull Requests with no commits in over 3 months
+
+- Add a tab for statistics about how long each Pull Request is open
